@@ -22,6 +22,12 @@ else
   export REAL_JOB_STAGE=$CI_JOB_STAGE
 fi
 
+if [ "x$CI_REGISTRY_IMAGE_SUFFIX" != "x" ]; then
+	export PIPELINE_CI_REGISTRY_IMAGE="$CI_REGISTRY_IMAGE/$CI_REGISTRY_IMAGE_SUFFIX"
+else
+	export PIPELINE_CI_REGISTRY_IMAGE="$CI_REGISTRY_IMAGE"
+fi
+
 ensure_deploy_variables() {
     if [[ -z "$KUBE_URL" ]]; then
       echo "ERROR: Missing KUBE_URL. Make sure to configure the Kubernetes Cluster in Operations->Kubernetes"

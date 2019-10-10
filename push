@@ -20,16 +20,54 @@ fi
 echo "Tagging application as latest..."
 
 if [ "x$1" != "x" ]; then
-	echo "Tagging $CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG as $CI_REGISTRY_IMAGE:$SHORT-latest"
+	echo "Tagging $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG as $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-latest"
 	export SHORT=$(echo "$1" | cut -d'-' -f2-)
-	docker pull $CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG
-        docker tag $CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG $CI_REGISTRY_IMAGE:$SHORT-latest
+	docker pull $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG
 	echo "Pushing to GitLab Container Registry..."
-        docker push $CI_REGISTRY_IMAGE:$SHORT-latest
+	if [ "x$CI_COMMIT_TAG" != "x" ]; then
+		docker tag $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG $PIPELINE_CI_REGISTRY_IMAGE:$SHORT
+		docker push $PIPELINE_CI_REGISTRY_IMAGE:$SHORT
+		docker rmi $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG $PIPELINE_CI_REGISTRY_IMAGE:$SHORT
+	else
+		docker tag $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-latest
+    	docker push $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-latest
+		docker rmi $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-latest
+	fi
+
 else
-	echo "Tagging $CI_REGISTRY_IMAGE:$CI_REGISTRY_TAG as $CI_REGISTRY_IMAGE:latest"
-	docker pull $CI_REGISTRY_IMAGE:$CI_REGISTRY_TAG
-        docker tag $CI_REGISTRY_IMAGE:$CI_REGISTRY_TAG $CI_REGISTRY_IMAGE:latest
+	echo "Tagging $PIPELINE_CI_REGISTRY_IMAGE:$CI_REGISTRY_TAG as $PIPELINE_CI_REGISTRY_IMAGE:latest"
+	docker pull $PIPELINE_CI_REGISTRY_IMAGE:$CI_REGISTRY_TAG
+    docker tag $PIPELINE_CI_REGISTRY_IMAGE:$CI_REGISTRY_TAG $PIPELINE_CI_REGISTRY_IMAGE:latest
 	echo "Pushing to GitLab Container Registry..."
-	docker push "$CI_REGISTRY_IMAGE:latest"
+	if [ "x$CI_COMMIT_TAG" != "x" ]; then
+		docker tag $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG $PIPELINE_CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+		docker push $PIPELINE_CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+		docker rmi $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG $PIPELINE_CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+	else
+		docker tag $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG $PIPELINE_CI_REGISTRY_IMAGE:latest
+    	docker push $PIPELINE_CI_REGISTRY_IMAGE:latest
+		docker rmi $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG $PIPELINE_CI_REGISTRY_IMAGE:latest
+	fi
+fi
+
+if [ "$REGISTRY_CLEANUP" == "true" ] && [[ "$REGISTRY_TOKEN" ]] && [ "x$CI_COMMIT_TAG" == "x" ]; then
+
+	if [ "x$CI_REGISTRY_IMAGE_SUFFIX" != "x" ]; then
+		REGISTRY_PATH="$CI_PROJECT_PATH/$CI_REGISTRY_IMAGE_SUFFIX"
+	else
+		REGISTRY_PATH="$CI_PROJECT_PATH"
+	fi
+
+	REGISTRY_ID=$(curl \
+		--header "PRIVATE-TOKEN: $REGISTRY_TOKEN" \
+		"$CI_API_V4_URL/projects/$CI_PROJECT_ID/registry/repositories" | jq ".[] | select(.path==\"$REGISTRY_PATH\") | .id")
+
+	curl \
+		--request DELETE \
+		--data "name_regex=$SHORT[0-9a-z]{40}" \
+		--data 'keep_n=5' \
+		--data 'older_than=2d' \
+		--header "PRIVATE-TOKEN: $REGISTRY_TOKEN" \
+		"$CI_API_V4_URL/projects/$CI_PROJECT_ID/registry/repositories/$REGISTRY_ID/tags"
+
 fi

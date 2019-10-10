@@ -30,7 +30,7 @@ spec:
       terminationGracePeriodSeconds: 60
       containers:
       - name: {{PREFIX}}-$CI_ENVIRONMENT_SLUG
-        image: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+        image: $PIPELINE_CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
         command: ["/bin/herokuish"]
         args: ["procfile", "start", "{{PREFIX}}"]
         imagePullPolicy: IfNotPresent
