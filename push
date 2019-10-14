@@ -64,7 +64,7 @@ if [ "$REGISTRY_CLEANUP" == "true" ] && [[ "$REGISTRY_TOKEN" ]] && [ "x$CI_COMMI
 
 	curl \
 		--request DELETE \
-		--data "name_regex=$SHORT-[0-9a-z]{40}" \
+		--data "name_regex=*[0-9a-z]{40}" \
 		--data 'keep_n=5' \
 		--data 'older_than=2d' \
 		--header "PRIVATE-TOKEN: $REGISTRY_TOKEN" \
