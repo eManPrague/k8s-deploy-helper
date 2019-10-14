@@ -20,8 +20,8 @@ fi
 echo "Tagging application as latest..."
 
 if [ "x$1" != "x" ]; then
-	echo "Tagging $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG as $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-latest"
 	export SHORT=$(echo "$1" | cut -d'-' -f2-)
+	echo "Tagging $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG as $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-latest"
 	docker pull $PIPELINE_CI_REGISTRY_IMAGE:$SHORT-$CI_REGISTRY_TAG
 	echo "Pushing to GitLab Container Registry..."
 	if [ "x$CI_COMMIT_TAG" != "x" ]; then
